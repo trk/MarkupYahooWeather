@@ -1,0 +1,540 @@
+<?php
+
+/**
+ * Markup Yahoo! Weather
+ *
+ * Display weather forecast using Yahoo! Weather API
+ *
+ * @author			: İskender TOTOĞLU, @ukyo (community), @trk (Github)
+ * @website			: http://altivebir.com.tr
+ * @projectWebsite	: https://github.com/trk/MarkupYahooWeather
+ *
+ */
+
+class MarkupYahooWeather extends WireData implements Module, ConfigurableModule {
+
+    const YAHOO_FORECAST_URL = "http://weather.yahooapis.com/forecastrss?";
+    const YAHOO_XML_URL = "http://xml.weather.yahoo.com/ns/rss/1.0";
+
+    /**
+     * Return information about this module (required)
+     *
+     */
+	public static function getModuleInfo() {
+		return array(
+			'title' => __('Markup Yahoo! Weather'),
+			'version' => 1,
+			'summary' => __('Display weather forecast using Yahoo!'),
+            'autoload' => false,
+            'singular' => true
+		);
+	}
+
+    /**
+     * Initialize the module
+     *
+     */
+    public function init() {}
+
+    /**
+     * Default settings configured with this module
+     *
+     */
+    static $defaultSettings = [
+        'cacheTime' => 86400,
+        'woeid' => '2344254', // Yahoo! Woeid (Where on Earth IDentifier)
+        'days' => 1, // shows 5 day forecast below current weather forecast, default = checked
+        'scale' => 0 // display temperature in Fahrenheit instead of Celsius, default = unchecked
+    ];
+
+    /**
+     * Construct and init default settings
+     *
+     */
+    public function __construct() {
+        foreach(self::$defaultSettings as $key => $value) $this->set($key, $value);
+    }
+
+    /**
+     * Return the folder used for caching
+     *
+     * @return string
+     *
+     */
+    protected function cacheFolder() {
+        return $this->config->paths->cache . $this->className() . '/';
+    }
+
+    /**
+     * Return the filename used for caching the All Currencies JSON data
+     *
+     * @return string
+     *
+     */
+    protected function cacheFilename($cached=false) {
+        $unit = ($this->scale) ? '.unit.f.' : '.unit.c.';
+        $cached = ($cached) ? '.cached' : '';
+        return $this->cacheFolder() . $this->className() . '.woeid.' . $this->woeid . $unit . $cached . ".json";
+    }
+
+    /**
+     * Currencies & Currency Translations
+     *
+     * @return array
+     */
+    public static function translations($key=null, $code=false) {
+
+        $translations = [
+            // Translations
+            'current-conditions' => __('Current Conditions:'),
+            'forecast-for-five-days' => __('Forecast for 5 days'),
+            'button-show-current-five-days-forecast' => __('Show 5 days forecast'),
+            'last-update' => __('Last update :'),
+
+            // Days
+            'mon' => __("Mon"),
+            'tue' => __("Tue"),
+            'wed' => __("Wed"),
+            'thu' => __("Thu"),
+            'fri' => __("Fri"),
+            'sat' => __("Sat"),
+            'sun' => __("Sun"),
+
+            // Weather Translations by weather code
+            'codes' => [
+                0 => __("Tornado"),
+                1 => __("Tropical Storm"),
+                2 => __("Hurricane"),
+                3 => __("Severe Thunderstorms"),
+                4 => __("Thunderstorms"),
+                5 => __("Mixed Rain and Snow"),
+                6 => __("Mixed Rain and Sleet"),
+                7 => __("Mixed Snow and Sleet"),
+                8 => __("Freezing Drizzle"),
+                9 => __("Drizzle"),
+                10 => __("Freezing Rain"),
+                11 => __("Showers"),
+                12 => __("Showers"),
+                13 => __("Snow Flurries"),
+                14 => __("Light Snow Showers"),
+                15 => __("Blowing Snow"),
+                16 => __("Snow"),
+                17 => __("Hail"),
+                18 => __("Sleet"),
+                19 => __("Dust"),
+                20 => __("Foggy"),
+                21 => __("Haze"),
+                22 => __("Smoky"),
+                23 => __("Blustery"),
+                24 => __("Windy"),
+                25 => __("Cold"),
+                26 => __("Cloudy"),
+                27 => __("Mostly Cloudy (Night)"),
+                28 => __("Mostly Cloudy (Day)"),
+                29 => __("Partly Cloudy (Night)"),
+                30 => __("Partly Cloudy (Day)"),
+                31 => __("Clear (Night)"),
+                32 => __("Sunny"),
+                33 => __("Fair (Night)"),
+                34 => __("Fair (Day)"),
+                35 => __("Mixed Rain and Hail"),
+                36 => __("Hot"),
+                37 => __("Isolated Thunderstorms"),
+                38 => __("Scattered Thunderstorms"),
+                39 => __("Scattered Thunderstorms"),
+                40 => __("Scattered Showers"),
+                41 => __("Heavy Snow"),
+                42 => __("Scattered Snow Showers"),
+                43 => __("Heavy Snow"),
+                44 => __("Partly Cloudy"),
+                45 => __("Thundershowers"),
+                46 => __("Snow Showers"),
+                47 => __("Isolated Thundershowers"),
+                3200 => __("Not Available"),
+            ],
+            // Weather Translations by text
+            'tornado' => __("Tornado"),
+            'tropical-storm' => __("Tropical Storm"),
+            'hurricane' => __("Hurricane"),
+            'severe-thunderstorms' => __("Severe Thunderstorms"),
+            'thunderstorms' => __("Thunderstorms"),
+            'mixed-rain-and-snow' => __("Mixed Rain And Snow"),
+            'mixed-snow-and-sleet' => __("Mixed Snow And Sleet"),
+            'freezing-drizzle' => __("Freezing Drizzle"),
+            'drizzle' => __("Drizzle"),
+            'freezing-rain' => __("Freezing Rain"),
+            'showers' => __("Showers"),
+            'pm-showers' => __("PM Showers"),
+            'snow-flurries' => __("Snow Flurries"),
+            'light-snow-showers' => __("Snow Flurries"),
+            'blowing-snow' => __("Blowing Snow"),
+            'snow' => __("Snow"),
+            'hail' => __("Hail"),
+            'sleet' => __("Sleet"),
+            'dust' => __("Dust"),
+            'foggy' => __("Foggy"),
+            'haze' => __("Haze"),
+            'smoky' => __("Smoky"),
+            'blustery' => __("Blustery"),
+            'windy' => __("Windy"),
+            'cold' => __("Cold"),
+            'cloudy' => __("Cloudy"),
+            'mostly-cloudy' => __("Mostly Cloudy"),
+            'mostly-sunny' => __("Mostly Sunny"),
+            'partly-cloudy' => __("Partly Cloudy"),
+            'clear' => __("Clear"),
+            // 'cloudy' => __("Cloudy"),
+            'sunny' => __("Sunny"),
+            'fair' => __("Fair"),
+            'mixed-rain-and-hail' => __("Mixed Rain And Hail"),
+            'rain' => __("Rain"),
+            'hot' => __("Hot"),
+            'isolated-thunderstorms' => __("Isolated Thunderstorms"),
+            'scattered-thunderstorms' => __("Scattered Thunderstorms"),
+            'scattered-showers' => __("Scattered Showers"),
+            'heavy-snow' => __("Heavy Snow"),
+            'scattered-snow-showers' => __("Scattered Snow Showers"),
+            // 'heavy-snow' => __("Heavy Snow"),
+            // 'partly-cloudy' => __("Partly Cloudy"),
+            'thundershowers' => __("Thundershowers"),
+            'snow-showers' => __("Snow Showers"),
+            'isolated-thundershowers' => __("Isolated Thundershowers"),
+            'not-available' => __("Not Available")
+        ];
+
+        if(!is_null($key)) {
+            if($code && array_key_exists($key, $translations['codes'])) return $translations['codes'][$key];
+            if(array_key_exists($key, $translations)) return $translations[$key];
+            else return $key;
+        }
+
+        return $translations;
+    }
+
+    /**
+     * Parse XML Data && Convert output to json string
+     *
+     * @param $data
+     * @return string
+     */
+    protected function parseXML($data) {
+
+        $xml = simplexml_load_string($data);
+        $xml->registerXPathNamespace('yweather', self::YAHOO_XML_URL);
+
+        $locationData = $xml->channel->xpath('yweather:location');
+
+        // Create Weather Data Array
+        $weatherData = [
+            'updated' => date('d.m.y / G:i:s', time()),
+            'location' => [],
+            'units' => [],
+            'wind' => [],
+            'atmosphere' => [],
+            'astronomy' => [],
+            'current' => [],
+            'forecasts' => []
+        ];
+
+        if(!empty($locationData)) {
+            $item = $xml->channel->item;
+
+            /**
+             * Get & Set Location Data
+             */
+            $locationData = json_encode($locationData);
+            $locationData = json_decode($locationData, true);
+            foreach($locationData as $k => $d) {
+                $location = $d['@attributes'];
+                $weatherData['location']['city'] = $location['city'];
+                $weatherData['location']['region'] = $location['region'];
+                $weatherData['location']['country'] = $location['country'];
+            }
+
+            /**
+             * Get & Set Units Data
+             */
+            $unitsData = $xml->channel->xpath('yweather:units');
+            $unitsData = json_encode($unitsData);
+            $unitsData = json_decode($unitsData, true);
+            foreach($unitsData as $k => $d) {
+                $units = $d['@attributes'];
+                $weatherData['units']['temperature'] = $units['temperature'];
+                $weatherData['units']['distance'] = $units['distance'];
+                $weatherData['units']['pressure'] = $units['pressure'];
+                $weatherData['units']['speed'] = $units['speed'];
+            }
+
+            /**
+             * Get & Set Wind Data
+             */
+            $windData = $xml->channel->xpath('yweather:wind');
+            $windData = json_encode($windData);
+            $windData = json_decode($windData, true);
+            foreach($windData as $k => $d) {
+                $wind = $d['@attributes'];
+                $weatherData['wind']['chill'] = $wind['chill'];
+                $weatherData['wind']['direction'] = $wind['direction'];
+                $weatherData['wind']['speed'] = $wind['speed'];
+            }
+
+            /**
+             * Get & Set Atmosphere Data
+             */
+            $atmosphereData = $xml->channel->xpath('yweather:atmosphere');
+            $atmosphereData = json_encode($atmosphereData);
+            $atmosphereData = json_decode($atmosphereData, true);
+            foreach($atmosphereData as $k => $d) {
+                $atmosphere = $d['@attributes'];
+                $weatherData['atmosphere']['humidity'] = $atmosphere['humidity'];
+                $weatherData['atmosphere']['visibility'] = $atmosphere['visibility'];
+                $weatherData['atmosphere']['pressure'] = $atmosphere['pressure'];
+                $weatherData['atmosphere']['rising'] = $atmosphere['rising'];
+            }
+
+            /**
+             * Get & Set Astronomy Data
+             */
+            $astronomyData = $xml->channel->xpath('yweather:astronomy');
+            $astronomyData = json_encode($astronomyData);
+            $astronomyData = json_decode($astronomyData, true);
+            foreach($astronomyData as $k => $d) {
+                $astronomy = $d['@attributes'];
+                $sunrise = explode(' ', $astronomy['sunrise']);
+                $sunset = explode(' ', $astronomy['sunset']);
+                $weatherData['astronomy']['sunrise'] = $sunrise[0];
+                $weatherData['astronomy']['sunrise_'] = $sunrise[1];
+                $weatherData['astronomy']['sunset'] = $sunset[0];
+                $weatherData['astronomy']['sunset_'] = $sunset[1];
+            }
+
+            /**
+             * Set Forecast Data & Get Current date informations
+             */
+            $currentData = $item->xpath('yweather:condition');
+            $currentData = json_encode($currentData);
+            $currentData = json_decode($currentData, true);
+            $forecastsData = $item->xpath('yweather:forecast');
+            $forecastsData = json_encode($forecastsData);
+            $forecastsData = json_decode($forecastsData, true);
+            $i=0;
+            foreach($forecastsData as $k => $d) {
+                $x=$i++;
+                $forecast = $d['@attributes'];
+                $DayMonthYear = explode(' ', $forecast['date']);
+                if($x==0) {
+                    $weatherData['current']['day'] = strtolower($forecast['day']);
+                    $weatherData['current']['dateDay'] = $DayMonthYear[0];
+                    $weatherData['current']['dateMonth'] = $DayMonthYear[1];
+                    $weatherData['current']['dateYear'] = $DayMonthYear[2];
+                }
+                $weatherData['forecasts'][] = [
+                    'day' => strtolower($forecast['day']),
+                    'date' => $forecast['date'],
+                    'dateDay' => $DayMonthYear[0],
+                    'dateMonth' => $DayMonthYear[1],
+                    'dateYear' => $DayMonthYear[2],
+                    'low' => $forecast['low'],
+                    'high' => $forecast['high'],
+                    'text' => strtolower(str_replace(' ', '-', $forecast['text'])),
+                    'code' => $forecast['code']
+                ];
+            }
+
+            /**
+             * Set Current Data
+             */
+            foreach($currentData as $k => $d) {
+                $current = $d['@attributes'];
+                $weatherData['current']['text'] = strtolower(str_replace(' ', '-', $current['text']));
+                $weatherData['current']['code'] = $current['code'];
+                $weatherData['current']['temp'] = $current['temp'];
+                $weatherData['current']['date'] = $current['date'];
+            }
+        }
+
+        return json_encode($weatherData);
+    }
+
+    /**
+     * Check Cached File is empty? or have data
+     * @param $file
+     * @return bool
+     */
+    protected function isFileEmpty($file) {
+        $data = file_get_contents($file);
+        $data = json_decode($data, true);
+        if(!empty($data)) return false;
+
+        return true;
+    }
+
+    /**
+     * Check Cache File
+     *
+     * @param null $file
+     * @return bool
+     */
+    protected function checkCache($file=null) {
+
+        if(!is_null($file)) {
+            if(is_file($file)) {
+                $isFileEmpty = $this->isFileEmpty($file);
+                $exists = ($this->cacheTime != false) ? is_file($file) : false;
+                $mtime = $exists ? filemtime($file) : 0;
+                if($isFileEmpty || !$exists || time() - $mtime > $this->cacheTime || date('d') != date('d', $mtime)) return true;
+            } else {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Retrieve latest weather data from Yahoo! Weather
+     *
+     * @return array
+     *
+     */
+    protected function getLatestData() {
+        $file = $this->cacheFilename();
+        $cachedFile = $this->cacheFilename(true);
+        $scale = $this->scale ? 'f' : 'c';
+
+        if($this->checkCache($cachedFile)) {
+            $http = new WireHttp();
+            $data = $http->get(self::YAHOO_FORECAST_URL . 'w=' . $this->woeid . '&u=' . $scale);
+            if($data) {
+                $data = $this->parseXML($data);
+                if(file_put_contents($file, $data)) {
+                    file_put_contents($cachedFile, file_get_contents($file));
+                    $data = file_get_contents($cachedFile);
+                }
+                if ($this->config->chmodFile) {
+                    chmod($file, octdec($this->config->chmodFile));
+                    chmod($cachedFile, octdec($this->config->chmodFile));
+                } else {
+                    $data = file_get_contents($cachedFile);
+                    $this->error("Error retrieving weather data from ".self::YAHOO_FORECAST_URL, Notice::log);
+                }
+            }
+        } else {
+            $data = file_get_contents($cachedFile);
+        }
+        return $data;
+    }
+
+    /**
+     * Get & Set Yahoo! Weather data
+     *
+     * @param bool $json
+     * @return mixed
+     */
+    public function getWeatherData($json=true) {
+        $data = $this->getLatestData();
+        if($json) {
+            header("Content-type: application/json");
+            echo $data;
+            exit();
+        } else {
+            return json_decode($data, true);
+        }
+    }
+
+    /**
+     * Configure the module
+     */
+	static public function getModuleConfigInputfields(array $data) {
+
+		$fields = new InputfieldWrapper();
+
+		$modules = wire('modules');
+
+		$data = array_merge(self::$defaultSettings, $data);
+
+        $f = wire('modules')->get('InputfieldInteger');
+        $f->attr('name', 'cacheTime');
+        $f->attr('value', empty($data['cacheTime']) ? self::$defaultSettings['cacheTime'] : $data['cacheTime']);
+        $f->label = __('Cache Time : Number of Seconds');
+        $f->notes = __('Example : 60 = 1 minute, 600 = 10 minutes, 3600 = 1 hour, 86400 = 1 day, 604800 = 1 week, 2419200 = 1 month.');
+        $fields->add($f);
+
+        $f = $modules->get("InputfieldText");
+        $f->name = "woeid";
+        $f->label = __("Yahoo! Weather Woeid");
+        $f->value = $data['woeid'];
+        $f->description = __("Woeid is a number located right beside the city name, e.g. https://weather.yahoo.com/tr/state/marmaris-2344254/");
+		$fields->add($f);
+
+        $f = $modules->get("InputfieldCheckbox");
+        $f->name = "days";
+        $f->label = __("Show 5 day forecast below current weather forecast?");
+        $f->value = 1;
+        $f->attr('checked', empty($data['days']) ? '' : 'checked');
+		$fields->add($f);
+
+        $f = $modules->get("InputfieldCheckbox");
+        $f->name = "scale";
+        $f->label = __("Display temperature in Fahrenheit instead of Celsius?");
+        $f->value = 1;
+        $f->attr('checked', empty($data['scale']) ? '' : 'checked');
+		$fields->add($f);
+
+		return $fields;
+
+    }
+
+    /**
+     * Install Module & cache folder and files
+     * ------------------------------------------------------------------------
+     */
+    public function ___install() {
+        $cacheFolder = $this->cacheFolder();
+        $cacheFile = $this->cacheFilename();
+        $cachedCacheFile = $this->cacheFilename(true);
+
+        // Check folder is exist ?
+        if(is_dir($cacheFolder)) return true;
+
+        // Try to create cache folder
+        if(wireMkdir($cacheFolder) === false) {
+            $this->error("The cache folder ({$cacheFolder}) could not be created.");
+        }
+        // If we have cache folder create cache files
+        else {
+            if(!is_dir($cacheFile) && file_put_contents($cacheFile, "{}") === false) {
+                $this->error("The cache file {$cacheFile} could not be created", Notice::log);
+            }
+
+            if(!is_dir($cachedCacheFile) && file_put_contents($cachedCacheFile, "{}") === false) {
+                $this->error("The cache file {$cachedCacheFile} could not be created", Notice::log);
+            }
+        }
+    }
+
+    /**
+     * Uninstall the module & cache folders and files
+     * ------------------------------------------------------------------------
+     */
+    public function ___uninstall() {
+
+        $cacheFolder = $this->cacheFolder();
+
+        if(is_dir($cacheFolder)) {
+
+            $it = new RecursiveDirectoryIterator($cacheFolder, RecursiveDirectoryIterator::SKIP_DOTS);
+            $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
+
+            foreach($files as $file) {
+                if ($file->isDir()){
+                    rmdir($file->getRealPath());
+                } else {
+                    unlink($file->getRealPath());
+                }
+            }
+
+            rmdir($cacheFolder);
+        }
+    }
+}
