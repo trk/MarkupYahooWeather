@@ -23,7 +23,7 @@ class MarkupYahooWeather extends WireData implements Module, ConfigurableModule 
 	public static function getModuleInfo() {
 		return array(
 			'title' => __('Markup Yahoo! Weather'),
-			'version' => 2,
+			'version' => 3,
 			'summary' => __('Display weather forecast using Yahoo!'),
             'autoload' => false,
             'singular' => true
@@ -72,7 +72,7 @@ class MarkupYahooWeather extends WireData implements Module, ConfigurableModule 
      *
      */
     protected function cacheFilename($cached=false) {
-        $unit = ($this->scale) ? '.unit.f.' : '.unit.c.';
+        $unit = ($this->scale) ? '.unit.f' : '.unit.c';
         $cached = ($cached) ? '.cached' : '';
         return $this->cacheFolder() . $this->className() . '.woeid.' . $this->woeid . $unit . $cached . ".json";
     }
