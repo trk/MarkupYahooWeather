@@ -23,7 +23,7 @@ class MarkupYahooWeather extends WireData implements Module, ConfigurableModule 
 	public static function getModuleInfo() {
 		return array(
 			'title' => __('Markup Yahoo! Weather'),
-			'version' => 1,
+			'version' => 2,
 			'summary' => __('Display weather forecast using Yahoo!'),
             'autoload' => false,
             'singular' => true
@@ -40,12 +40,12 @@ class MarkupYahooWeather extends WireData implements Module, ConfigurableModule 
      * Default settings configured with this module
      *
      */
-    static $defaultSettings = [
+    static $defaultSettings = array(
         'cacheTime' => 86400,
         'woeid' => '2344254', // Yahoo! Woeid (Where on Earth IDentifier)
         'days' => 1, // shows 5 day forecast below current weather forecast, default = checked
         'scale' => 0 // display temperature in Fahrenheit instead of Celsius, default = unchecked
-    ];
+    );
 
     /**
      * Construct and init default settings
@@ -80,11 +80,15 @@ class MarkupYahooWeather extends WireData implements Module, ConfigurableModule 
     /**
      * Currencies & Currency Translations
      *
+     * Types: days, codes, texts
+     *
+     * @usage : wire('modules')->get('MarkupYahooWeather')->translations($key, $type);
+     *
      * @return array
      */
-    public static function translations($key=null, $code=false) {
+    public static function translations($key=null, $type='') {
 
-        $translations = [
+        $translations = array(
             // Translations
             'current-conditions' => __('Current Conditions:'),
             'forecast-for-five-days' => __('Forecast for 5 days'),
@@ -92,16 +96,17 @@ class MarkupYahooWeather extends WireData implements Module, ConfigurableModule 
             'last-update' => __('Last update :'),
 
             // Days
-            'mon' => __("Mon"),
-            'tue' => __("Tue"),
-            'wed' => __("Wed"),
-            'thu' => __("Thu"),
-            'fri' => __("Fri"),
-            'sat' => __("Sat"),
-            'sun' => __("Sun"),
-
-            // Weather Translations by weather code
-            'codes' => [
+            'days' => array(
+                'mon' => __("Mon"),
+                'tue' => __("Tue"),
+                'wed' => __("Wed"),
+                'thu' => __("Thu"),
+                'fri' => __("Fri"),
+                'sat' => __("Sat"),
+                'sun' => __("Sun"),
+            ),
+            // Weather "CODES" Translations
+            'codes' => array(
                 0 => __("Tornado"),
                 1 => __("Tropical Storm"),
                 2 => __("Hurricane"),
@@ -151,61 +156,93 @@ class MarkupYahooWeather extends WireData implements Module, ConfigurableModule 
                 46 => __("Snow Showers"),
                 47 => __("Isolated Thundershowers"),
                 3200 => __("Not Available"),
-            ],
-            // Weather Translations by text
-            'tornado' => __("Tornado"),
-            'tropical-storm' => __("Tropical Storm"),
-            'hurricane' => __("Hurricane"),
-            'severe-thunderstorms' => __("Severe Thunderstorms"),
-            'thunderstorms' => __("Thunderstorms"),
-            'mixed-rain-and-snow' => __("Mixed Rain And Snow"),
-            'mixed-snow-and-sleet' => __("Mixed Snow And Sleet"),
-            'freezing-drizzle' => __("Freezing Drizzle"),
-            'drizzle' => __("Drizzle"),
-            'freezing-rain' => __("Freezing Rain"),
-            'showers' => __("Showers"),
-            'pm-showers' => __("PM Showers"),
-            'snow-flurries' => __("Snow Flurries"),
-            'light-snow-showers' => __("Snow Flurries"),
-            'blowing-snow' => __("Blowing Snow"),
-            'snow' => __("Snow"),
-            'hail' => __("Hail"),
-            'sleet' => __("Sleet"),
-            'dust' => __("Dust"),
-            'foggy' => __("Foggy"),
-            'haze' => __("Haze"),
-            'smoky' => __("Smoky"),
-            'blustery' => __("Blustery"),
-            'windy' => __("Windy"),
-            'cold' => __("Cold"),
-            'cloudy' => __("Cloudy"),
-            'mostly-cloudy' => __("Mostly Cloudy"),
-            'mostly-sunny' => __("Mostly Sunny"),
-            'partly-cloudy' => __("Partly Cloudy"),
-            'clear' => __("Clear"),
-            // 'cloudy' => __("Cloudy"),
-            'sunny' => __("Sunny"),
-            'fair' => __("Fair"),
-            'mixed-rain-and-hail' => __("Mixed Rain And Hail"),
-            'rain' => __("Rain"),
-            'hot' => __("Hot"),
-            'isolated-thunderstorms' => __("Isolated Thunderstorms"),
-            'scattered-thunderstorms' => __("Scattered Thunderstorms"),
-            'scattered-showers' => __("Scattered Showers"),
-            'heavy-snow' => __("Heavy Snow"),
-            'scattered-snow-showers' => __("Scattered Snow Showers"),
-            // 'heavy-snow' => __("Heavy Snow"),
-            // 'partly-cloudy' => __("Partly Cloudy"),
-            'thundershowers' => __("Thundershowers"),
-            'snow-showers' => __("Snow Showers"),
-            'isolated-thundershowers' => __("Isolated Thundershowers"),
-            'not-available' => __("Not Available")
-        ];
+            ),
+            // Weather "TEXTS" Translations
+            'texts' => array(
+                'tornado' => 0,
+                'tropical-storm' => 1,
+                'hurricane' => 2,
+                'severe-hunderstorms' => 3,
+                'thunderstorms' => 4,
+                'mixed-rain-and-snow' => 5,
+                'mixed-rain-and-sleet' => 6,
+                'mixed-snow-and-sleet' => 7,
+                'freezing-drizzle' => 8,
+                'drizzle' => 9,
+                'freezing-rain' => 10,
+                'showers' => 11,
+                // 'showers' => 12,
+                'snow-flurries' => 13,
+                'light-snow-showers' => 14,
+                'blowing-snow' => 15,
+                'snow' => 16,
+                'hail' => 17,
+                'sleet' => 18,
+                'dust' => 19,
+                'foggy' => 20,
+                'haze' => 21,
+                'smoky' => 22,
+                'blustery' => 23,
+                'windy' => 24,
+                'cold' => 25,
+                'cloudy' => 26,
+                'mostly-cloudy-(night)' => 27,
+                'mostly-cloudy-(day)' => 28,
+                'partly-cloudy-(night)' => 29,
+                'partly-cloudy-(day)' => 30,
+                'clear-(night)' => 31,
+                'sunny' => 32,
+                'fair-(night)' => 33,
+                'fair-(day)' => 34,
+                'mixed-rain-and-hail' => 35,
+                'hot' => 36,
+                'isolated-thunderstorms' => 37,
+                'scattered-thunderstorms' => 38,
+                // 'scattered-thunderstorms' => 39,
+                'scattered-showers' => 40,
+                'heavy-snow' => 41,
+                'scattered-snow-showers' => 42,
+                // 'heavy-snow' => 43,
+                'partly-cloudy' => 44,
+                'thundershowers' => 45,
+                'snow-showers' => 46,
+                'isolated-thundershowers' => 47,
+                'not-available' => 3200,
+                'severe-thunderstorms' => __("Severe Thunderstorms"),
+                'pm-showers' => __("PM Showers"),
+                'mostly-cloudy' => __("Mostly Cloudy"),
+                'mostly-sunny' => __("Mostly Sunny"),
+                'clear' => __("Clear"),
+                'fair' => __("Fair"),
+                'rain' => __("Rain"),
+                'rain-shower' => __("Rain Shower"),
+                'heavy-rain' => __("Heavy Rain"),
+            )
+        );
 
         if(!is_null($key)) {
-            if($code && array_key_exists($key, $translations['codes'])) return $translations['codes'][$key];
-            if(array_key_exists($key, $translations)) return $translations[$key];
-            else return $key;
+
+            switch($type) {
+                case 'days':
+                    if(array_key_exists($key, $translations[$type])) return $translations[$type][$key];
+                    break;
+                case 'codes':
+                    if(array_key_exists($key, $translations[$type])) return $translations[$type][$key];
+                    break;
+                case 'texts':
+                    if(array_key_exists($key, $translations[$type])) {
+                        $translation = $translations[$type][$key];
+                        if(is_numeric($translation) && array_key_exists($translation, $translations['codes'])) return $translations['codes'][$translation];
+                        return $translations[$type][$key];
+                    };
+                    break;
+                default:
+                    if(array_key_exists($key, $translations)) return $translations[$key];
+                    break;
+
+            }
+
+            return $key;
         }
 
         return $translations;
@@ -225,16 +262,16 @@ class MarkupYahooWeather extends WireData implements Module, ConfigurableModule 
         $locationData = $xml->channel->xpath('yweather:location');
 
         // Create Weather Data Array
-        $weatherData = [
+        $weatherData = array(
             'updated' => date('d.m.y / G:i:s', time()),
-            'location' => [],
-            'units' => [],
-            'wind' => [],
-            'atmosphere' => [],
-            'astronomy' => [],
-            'current' => [],
-            'forecasts' => []
-        ];
+            'location' => array(),
+            'units' => array(),
+            'wind' => array(),
+            'atmosphere' => array(),
+            'astronomy' => array(),
+            'current' => array(),
+            'forecasts' => array()
+        );
 
         if(!empty($locationData)) {
             $item = $xml->channel->item;
@@ -328,7 +365,7 @@ class MarkupYahooWeather extends WireData implements Module, ConfigurableModule 
                     $weatherData['current']['dateMonth'] = $DayMonthYear[1];
                     $weatherData['current']['dateYear'] = $DayMonthYear[2];
                 }
-                $weatherData['forecasts'][] = [
+                $weatherData['forecasts'][] = array(
                     'day' => strtolower($forecast['day']),
                     'date' => $forecast['date'],
                     'dateDay' => $DayMonthYear[0],
@@ -338,7 +375,7 @@ class MarkupYahooWeather extends WireData implements Module, ConfigurableModule 
                     'high' => $forecast['high'],
                     'text' => strtolower(str_replace(' ', '-', $forecast['text'])),
                     'code' => $forecast['code']
-                ];
+                );
             }
 
             /**
